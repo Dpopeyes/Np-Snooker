@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบคำนวณเวลาและค่าบริการโต๊ะสนุ๊กเกอร์</title>
+  <!-- Google Fonts: Prompt & Sarabun -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- QRCode library for PromptPay -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'Sarabun', 'sans-serif'],
+          },
+          colors: {
+            snooker: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+              baize: '#0b3c2e',
+              dark: '#0c1612',
+              card: '#15241f',
+              border: '#1f3b32',
+              gold: '#f59e0b',
+              goldHover: '#d97706',
+              ballRed: '#ef4444'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+      background-color: #0b1411;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0c1612;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #1f3b32;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #059669;
+    }
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #print-area, #print-area * {
+        visibility: visible;
+      }
+      #print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        color: black !important;
+        background: white !important;
+      }
+    }
+  </style>
+</head>
+<body class="custom-scrollbar">
+
+  <!-- Header & Navigation -->
+  <header class="bg-[#111f1a] border-b border-[#1f3b32] sticky top-0 z-40 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 sm:h-20">
+        <!-- Logo & Title -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-600 flex items-center justify-center shadow-lg border-2 border-emerald-400">
+            <span class="text-xl sm:text-2xl">🎱</span>
+          </div>
+          <div>
+            <h1 class="text-lg sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+              สนุ๊กเกอร์ คลับ
+              <span class="text-xs bg-emerald-950 text-emerald-400 border border-emerald-700/50 px-2 py-0.5 rounded-full font-normal hidden sm:inline-block">Snooker Rate</span>
+            </h1>
+            <p class="text-xs text-emerald-300/70">ระบบคิดเงินและจับเวลาโต๊ะสนุ๊กเกอร์ตามตารางมาตรฐาน</p>
+          </div>
+        </div>
+
+        <!-- Tab Navigation Buttons -->
+        <div class="flex items-center space-x-1 sm:space-x-2 bg-[#0c1612] p-1 rounded-xl border border-[#1f3b32]">
+          <button id="nav-calc" onclick="switchTab('calc')" class="tab-btn px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-white bg-emerald-600 shadow-md">
+            <span>⚡</span>
+            <span>คำนวณด่วน</span>
+          </button>
+          <button id="nav-tables" onclick="switchTab('tables')" class="tab-btn px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-gray-400 hover:text-gray-200">
+            <span>⏱️</span>
+            <span>โต๊ะสด & จับเวลา</span>
+            <span id="active-tables-badge" class="hidden ml-1 px-1.5 py-0.2 text-[10px] font-bold bg-amber-500 text-black rounded-full">0</span>
+          </button>
+          <button id="nav-chart" onclick="switchTab('chart')" class="tab-btn px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-gray-400 hover:text-gray-200">
+            <span>📊</span>
+            <span>ตารางราคา</span>
+          </button>
+          <button id="nav-history" onclick="switchTab('history')" class="tab-btn px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-gray-400 hover:text-gray-200 hidden sm:flex">
+            <span>📑</span>
+            <span>ประวัติบิล</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: QUICK CALCULATOR (คำนวณด่วน)       -->
+    <!-- ========================================== -->
+    <section id="tab-calc" class="tab-pane space-y-6">
+      
+      <!-- Top Overview Banner -->
+      <div class="bg-gradient-to-r from-[#11241d] to-[#0c1612] border border-[#1f3b32] rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden">
+        <div class="absolute -right-6 -bottom-6 opacity-10 text-9xl pointer-events-none select-none">🎱</div>
+        <div class="max-w-2xl">
+          <span class="inline-block px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-2">
+            คำนวณราคาอัตโนมัติ
+          </span>
+          <h2 class="text-xl sm:text-3xl font-bold text-white mb-2">คำนวณค่าเวลาโต๊ะสนุ๊กเกอร์</h2>
+          <p class="text-sm text-gray-300">
+            เลือกกลุ่มโต๊ะ ระบุเวลาเริ่ม-จบ หรือกรอกจำนวนชั่วโมงและนาที ระบบจะคำนวณตามตารางราคาของร้านทันที
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left: Input Form (7 cols on lg) -->
+        <div class="lg:col-span-7 space-y-5">
+          <div class="bg-[#13221c] border border-[#1f3b32] rounded-2xl p-5 sm:p-6 shadow-lg">
+            
+            <!-- Step 1: Select Table Group -->
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-emerald-400 mb-2.5 flex items-center justify-between">
+                <span>1. เลือกประเภท / หมายเลขโต๊ะ</span>
+                <span class="text-xs text-gray-400">อัตราค่าบริการตามป้าย</span>
+              </label>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <!-- Group 1 Option -->
+                <label class="relative flex flex-col p-4 rounded-xl border cursor-pointer transition-all duration-200 group1-label border-emerald-500 bg-emerald-950/40">
+                  <input type="radio" name="calc-table-group" value="group1" checked onchange="onCalcInputChange()" class="sr-only">
+                  <div class="flex items-center justify-between mb-1.5">
+                    <span class="font-bold text-base text-white">โต๊ะ 1, 3, V1, V2</span>
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500 text-black">100 บาท/ชม.</span>
+                  </div>
+                  <p class="text-xs text-gray-300">เศษนาที: เริ่ม 3 นาที 5บ. | 4-6 น. 10บ. | เพิ่มทุก 3 นาที</p>
+                </label>
+
+                <!-- Group 2 Option -->
+                <label class="relative flex flex-col p-4 rounded-xl border cursor-pointer transition-all duration-200 group2-label border-[#1f3b32] bg-[#0d1814] hover:border-gray-500">
+                  <input type="radio" name="calc-table-group" value="group2" onchange="onCalcInputChange()" class="sr-only">
+                  <div class="flex items-center justify-between mb-1.5">
+                    <span class="font-bold text-base text-white">โต๊ะ 2, 4</span>
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500 text-black">80 บาท/ชม.</span>
+                  </div>
+                  <p class="text-xs text-gray-300">เศษนาที: 3-5 น. 5บ. | 6-8 น. 10บ. | 9-12 น. 15บ. ฯลฯ</p>
+                </label>
+              </div>
+            </div>
+
+            <!-- Step 2: Calculation Mode (ใส่แค่ 1.50 = 1 ชม. 50 นาที) -->
+            <div class="mb-5">
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-sm font-medium text-emerald-400">2. จำนวนเวลาที่เล่น</label>
+                <div class="inline-flex rounded-lg bg-[#0c1612] p-1 border border-[#1f3b32]">
+                  <button type="button" onclick="setCalcMode('decimalHours')" id="btn-mode-decimal" class="px-2.5 sm:px-3 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white transition-colors">
+                    ใส่เวลา (เช่น 1.50)
+                  </button>
+                  <button type="button" onclick="setCalcMode('timeRange')" id="btn-mode-range" class="px-2.5 sm:px-3 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-colors">
+                    เวลาเริ่ม - จบ
+                  </button>
+                  <button type="button" onclick="setCalcMode('duration')" id="btn-mode-duration" class="px-2.5 sm:px-3 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-colors">
+                    ชม. / นาที
+                  </button>
+                </div>
+              </div>
+
+              <!-- Mode 1: Time Input (ใส่แค่ 1.50 = 1 ชม. 50 นาที) - DEFAULT -->
+              <div id="calc-mode-decimal" class="space-y-3 p-4 bg-[#0d1814] rounded-xl border border-emerald-500/50 shadow-inner">
+                <div>
+                  <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs text-gray-300 font-medium">พิมพ์เวลา (ชั่วโมง.นาที):</span>
+                    <span class="text-[11px] text-emerald-400 font-mono">พิมพ์ 1.50 = 1 ชม. 50 นาที</span>
+                  </div>
+                  <div class="relative">
+                    <input type="text" inputmode="decimal" id="calc-decimal-hours" value="0.00" placeholder="0.00" onfocus="this.select()" oninput="onCalcInputChange()" class="w-full bg-[#162720] border-2 border-emerald-500 rounded-xl px-4 py-3 text-white font-mono text-3xl font-extrabold focus:outline-none focus:border-emerald-300 text-center tracking-wider shadow-lg">
+                    <span class="absolute right-4 top-4 text-xs text-emerald-400 font-semibold bg-[#11231b] px-2 py-0.5 rounded border border-[#1f3b32]">ชม.นาที</span>
+                  </div>
+                </div>
+
+                <!-- Live Converted Result Indicator -->
+                <div class="flex items-center justify-between text-xs bg-[#11231b] px-3 py-2 rounded-lg border border-[#1f3b32]">
+                  <span class="text-gray-400">คิดเป็นเวลา:</span>
+                  <span id="decimal-converted-text" class="text-emerald-300 font-bold font-mono">0 ชั่วโมง 0 นาที (0 นาที)</span>
+                </div>
+
+                <!-- Quick Preset Buttons -->
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                  <span class="text-xs text-gray-400 self-center mr-1">ปุ่มด่วน:</span>
+                  <button type="button" onclick="setDecimalHours('0.00')" class="px-2.5 py-1 text-xs bg-red-950/40 hover:bg-red-900/60 text-red-300 rounded border border-red-800/50 font-mono">0.00 (ล้าง)</button>
+                  <button type="button" onclick="setDecimalHours('0.30')" class="px-2.5 py-1 text-xs bg-[#172c24] hover:bg-emerald-800 text-emerald-300 rounded border border-[#1f3b32]">0.30 (30น.)</button>
+                  <button type="button" onclick="setDecimalHours('0.45')" class="px-2.5 py-1 text-xs bg-[#172c24] hover:bg-emerald-800 text-emerald-300 rounded border border-[#1f3b32]">0.45 (45น.)</button>
+                  <button type="button" onclick="setDecimalHours('1.00')" class="px-2.5 py-1 text-xs bg-[#172c24] hover:bg-emerald-800 text-emerald-300 rounded border border-[#1f3b32]">1.00 (1ชม.)</button>
+                  <button type="button" onclick="setDecimalHours('1.30')" class="px-2.5 py-1 text-xs bg-[#172c24] hover:bg-emerald-800 text-emerald-300 rounded border border-[#1f3b32]">1.30 (1ชม.30น.)</button>
+                  <button type="button" onclick="setDecimalHours('1.50')" class="px-2.5 py-1 text-xs bg-[#172c24] hover:bg-emerald-800 text-emerald-300 rounded border border-[#1f3b32]">1.50 (1ชม.50น.)</button>
+                  <button type="button" onclick="setDecimalHours('2.00')" class="px-2.5 py-1 text-xs bg-[#172c24] hover:bg-emerald-800 text-emerald-300 rounded border border-[#1f3b32]">2.00 (2ชม.)</button>
+                </div>
+              </div>
+
+              <!-- Mode 2: Start & End Time Range Inputs -->
+              <div id="calc-mode-range" class="hidden space-y-3 p-4 bg-[#0d1814] rounded-xl border border-[#1f3b32]">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <!-- Start Time -->
+                  <div>
+                    <div class="flex items-center justify-between mb-1">
+                      <span class="text-xs text-gray-300 font-medium">เวลาเริ่มเล่น</span>
+                      <button type="button" onclick="setCurrentTimeToInput('calc-start-time')" class="text-[11px] text-emerald-400 hover:text-emerald-300 underline">
+                        ใช้เวลาปัจจุบัน
+                      </button>
+                    </div>
+                    <input type="time" id="calc-start-time" value="13:00" onchange="onCalcInputChange()" class="w-full bg-[#162720] border border-[#1f3b32] rounded-lg px-3 py-2 text-white font-mono text-base focus:outline-none focus:border-emerald-500">
+                  </div>
+
+                  <!-- End Time -->
+                  <div>
+                    <div class="flex items-center justify-between mb-1">
+                      <span class="text-xs text-gray-300 font-medium">เวลาเสร็จสิ้น</span>
+                      <button type="button" onclick="setCurrentTimeToInput('calc-end-time')" class="text-[11px] text-emerald-400 hover:text-emerald-300 underline">
+                        ใช้เวลาปัจจุบัน
+                      </button>
+                    </div>
+                    <input type="time" id="calc-end-time" value="14:30" onchange="onCalcInputChange()" class="w-full bg-[#162720] border border-[#1f3b32] rounded-lg px-3 py-2 text-white font-mono text-base focus:outline-none focus:border-emerald-500">
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-1 text-xs text-gray-400">
+                  <span>* ข้ามเที่ยงคืนจะคำนวณอัตโนมัติ</span>
+                  <div class="flex gap-2">
+                    <button type="button" onclick="addMinutesToCalcEnd(30)" class="px-2 py-0.5 bg-[#172c24] hover:bg-[#1e3b30] text-emerald-300 rounded border border-[#1f3b32]">+30 นาที</button>
+                    <button type="button" onclick="addMinutesToCalcEnd(60)" class="px-2 py-0.5 bg-[#172c24] hover:bg-[#1e3b30] text-emerald-300 rounded border border-[#1f3b32]">+1 ชม.</button>
+                    <button type="button" onclick="addMinutesToCalcEnd(120)" class="px-2 py-0.5 bg-[#172c24] hover:bg-[#1e3b30] text-emerald-300 rounded border border-[#1f3b32]">+2 ชม.</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mode 3: Direct Duration Inputs -->
+              <div id="calc-mode-duration" class="hidden space-y-3 p-4 bg-[#0d1814] rounded-xl border border-[#1f3b32]">
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs text-gray-300 font-medium mb-1">จำนวนชั่วโมง</label>
+                    <div class="relative">
+                      <input type="number" id="calc-hours" min="0" max="99" value="1" oninput="onCalcInputChange()" class="w-full bg-[#162720] border border-[#1f3b32] rounded-lg px-3 py-2 text-white font-mono text-lg focus:outline-none focus:border-emerald-500">
+                      <span class="absolute right-3 top-2.5 text-xs text-gray-400">ชั่วโมง</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-300 font-medium mb-1">จำนวนนาที</label>
+                    <div class="relative">
+                      <input type="number" id="calc-minutes" min="0" max="59" value="30" oninput="onCalcInputChange()" class="w-full bg-[#162720] border border-[#1f3b32] rounded-lg px-3 py-2 text-white font-mono text-lg focus:outline-none focus:border-emerald-500">
+                      <span class="absolute right-3 top-2.5 text-xs text-gray-400">นาที</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Quick Minute Buttons -->
+                <div class="flex flex-wrap gap-1.5 pt-2">
+                  <span class="text-xs text-gray-400 self-center mr-1">นาทีด่วน:</span>
+                  <button type="button" onclick="setQuickDuration(0, 15)" class="px-2.5 py-1 text-xs bg-[#172c24] hover:bg-emerald-800 text-gray-200 rounded border border-[#1f3b32]">15น.</button>
+                  <button type="button" onclick="setQuickDuration(0, 30)" class="px-2.5 py-1 text-xs bg-[#172c24] hover:bg-emerald-800 text-gray-200 rounded border border-[#1f3b32]">30น.</button>
+                  <button type="button" onclick="setQuickDuration(0, 45)" class="px-2.5 py-1 text-xs bg-[#172c24] hover:bg-emerald-800 text-gray-200 rounded border border-[#1f3b32]">45น.</button>
+                  <button type="button" onclick="setQuickDuration(1, 0)" class="px-2.5 py-1 text-xs bg-[#172c24] hover:bg-emerald-800 text-gray-200 rounded border border-[#1f3b32]">1 ชม.</button>
+                  <button type="button" onclick="setQuickDuration(1, 30)" class="px-2.5 py-1 text-xs bg-[#172c24] hover:bg-emerald-800 text-gray-200 rounded border border-[#1f3b32]">1.5 ชม.</button>
+                  <button type="button" onclick="setQuickDuration(2, 0)" class="px-2.5 py-1 text-xs bg-[#172c24] hover:bg-emerald-800 text-gray-200 rounded border border-[#1f3b32]">2 ชม.</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Extra Add-ons (Snacks, Drinks, Services) in Quick Calculator -->
+            <div class="border-t border-[#1f3b32] pt-4">
+              <button type="button" onclick="toggleQuickExtraItems()" class="flex items-center justify-between w-full text-xs text-emerald-400 font-medium hover:text-emerald-300">
+                <span class="flex items-center gap-1.5">
+                  <span>🥤</span>
+                  <span>เพิ่มค่าน้ำ / อาหาร / ค่าบริการเสริม (ถ้ามี)</span>
+                </span>
+                <span id="quick-extra-toggle-icon">▼</span>
+              </button>
+
+              <div id="quick-extra-container" class="hidden mt-3 p-3 bg-[#0d1814] rounded-xl border border-[#1f3b32] space-y-2">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <button type="button" onclick="addQuickExtra(10, 'น้ำเปล่า')" class="text-xs p-2 bg-[#162720] hover:bg-[#1f3a2f] rounded border border-[#1f3b32] text-left">
+                    <div>น้ำเปล่า</div>
+                    <div class="text-emerald-400 font-bold">+10 ฿</div>
+                  </button>
+                  <button type="button" onclick="addQuickExtra(15, 'ชา')" class="text-xs p-2 bg-[#162720] hover:bg-[#1f3a2f] rounded border border-[#1f3b32] text-left">
+                    <div>ชา</div>
+                    <div class="text-emerald-400 font-bold">+15 ฿</div>
+                  </button>
+                  <button type="button" onclick="addQuickExtra(15, 'เอส')" class="text-xs p-2 bg-[#162720] hover:bg-[#1f3a2f] rounded border border-[#1f3b32] text-left">
+                    <div>เอส</div>
+                    <div class="text-emerald-400 font-bold">+15 ฿</div>
+                  </button>
+                  <button type="button" onclick="addQuickExtra(45, 'เบียร์ป๋อง')" class="text-xs p-2 bg-[#162720] hover:bg-[#1f3a2f] rounded border border-[#1f3b32] text-left">
+                    <div>เบียร์ป๋อง</div>
+                    <div class="text-emerald-400 font-bold">+45 ฿</div>
+                  </button>
+                  <button type="button" onclick="addQuickExtra(75, 'เบียร์ขวด')" class="text-xs p-2 bg-[#162720] hover:bg-[#1f3a2f] rounded border border-[#1f3b32] text-left">
+                    <div>เบียร์ขวด</div>
+                    <div class="text-emerald-400 font-bold">+75 ฿</div>
+                  </button>
+                </div>
+                <div class="flex items-center gap-2 pt-1">
+                  <input type="number" id="quick-extra-manual" min="0" placeholder="ระบุยอดเพิ่มเติม (บาท)" oninput="onCalcInputChange()" class="w-full bg-[#162720] border border-[#1f3b32] rounded-lg px-3 py-1.5 text-xs text-white">
+                  <button type="button" onclick="clearQuickExtra()" class="text-xs px-2.5 py-1.5 text-gray-400 hover:text-red-400 border border-[#1f3b32] rounded-lg">
+                    ล้าง
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Right: Calculation Result Card (5 cols on lg) -->
+        <div class="lg:col-span-5">
+          <div class="sticky top-24 bg-gradient-to-b from-[#14261f] to-[#0d1814] border-2 border-emerald-500/50 rounded-2xl p-6 shadow-2xl space-y-5">
+            
+            <div class="flex items-center justify-between border-b border-[#1f3b32] pb-3">
+              <span class="text-xs uppercase tracking-wider text-emerald-400 font-bold flex items-center gap-1.5">
+                <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                สรุปยอดคำนวณ
+              </span>
+              <span id="res-group-badge" class="px-2.5 py-0.5 rounded text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                โต๊ะ 1, 3, V1, V2
+              </span>
+            </div>
+
+            <!-- Big Price Display -->
+            <div class="text-center py-3 bg-[#0a1410] rounded-xl border border-[#1f3b32]">
+              <div class="text-xs text-gray-400 mb-1">ยอดรวมทั้งหมดที่ต้องชำระ</div>
+              <div class="flex items-baseline justify-center gap-2">
+                <span id="res-total-price" class="text-5xl font-extrabold text-amber-400 tracking-tight">0</span>
+                <span class="text-xl font-bold text-gray-300">บาท</span>
+              </div>
+              <div id="res-duration-text" class="text-xs text-emerald-300 mt-1 font-medium">
+                เวลาเล่น: 0 ชม. 0 นาที (0 นาที)
+              </div>
+            </div>
+
+            <!-- Breakdown Details -->
+            <div class="space-y-2.5 text-sm">
+              <div class="flex items-center justify-between text-gray-300 py-1 border-b border-[#1b3127]">
+                <span>ค่าบริการชั่วโมงเต็ม (<span id="res-full-hours">0</span> ชม. × <span id="res-hourly-rate">100</span>฿)</span>
+                <span class="font-bold text-white"><span id="res-hour-cost">0</span> ฿</span>
+              </div>
+
+              <div class="flex items-center justify-between text-gray-300 py-1 border-b border-[#1b3127]">
+                <div class="flex flex-col">
+                  <span>เศษนาที (<span id="res-rem-minutes">0</span> นาที)</span>
+                  <span id="res-table-row-info" class="text-[11px] text-emerald-400">ตรงตามแถวตาราง: 0 บ.</span>
+                </div>
+                <span class="font-bold text-white"><span id="res-minute-cost">0</span> ฿</span>
+              </div>
+
+              <div id="res-extra-row" class="hidden flex items-center justify-between text-gray-300 py-1 border-b border-[#1b3127]">
+                <span class="text-amber-300">ค่าเครื่องดื่ม/บริการเสริม</span>
+                <span class="font-bold text-amber-400">+<span id="res-extra-cost">0</span> ฿</span>
+              </div>
+            </div>
+
+            <!-- Reference Table Match Insight -->
+            <div class="p-3 bg-[#091510] rounded-xl border border-emerald-900/40 text-xs">
+              <div class="text-gray-400 mb-1 font-medium flex items-center gap-1">
+                <span>📌</span>
+                <span>การคิดตามตาราง:</span>
+              </div>
+              <div id="res-explain" class="text-emerald-200">
+                เศษเวลาจะถูกนำไปเทียบกับตารางราคาอย่างแม่นยำ
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-2 gap-3 pt-2">
+              <button type="button" onclick="openQrModalFromQuickCalc()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 px-3 rounded-xl text-sm transition-all shadow-lg flex items-center justify-center gap-1.5">
+                <span>📱</span>
+                <span>สร้าง QR จ่ายเงิน</span>
+              </button>
+              <button type="button" onclick="printQuickCalcSlip()" class="w-full bg-[#1a332a] hover:bg-[#234538] text-gray-200 font-semibold py-2.5 px-3 rounded-xl text-sm border border-[#2c5344] transition-all flex items-center justify-center gap-1.5">
+                <span>🖨️</span>
+                <span>พิมพ์สลิป</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- TAB 2: LIVE TABLES & TIMERS (โต๊ะสด)       -->
+    <!-- ========================================== -->
+    <section id="tab-tables" class="tab-pane hidden space-y-6">
+      
+      <!-- Table Header & Controls -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#111f1a] p-4 sm:p-5 rounded-2xl border border-[#1f3b32]">
+        <div>
+          <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+            <span>โต๊ะสนุ๊กเกอร์ทั้งหมด</span>
+            <span class="text-xs bg-[#0b1411] px-2.5 py-1 rounded-full text-emerald-400 border border-[#1f3b32]">
+              กำลังเล่น <span id="active-tables-count">0</span> โต๊ะ
+            </span>
+          </h2>
+          <p class="text-xs text-gray-400 mt-0.5">กดเปิดโต๊ะเพื่อเริ่มจับเวลา ระบบจะคำนวณราคา Real-time ทุกนาที</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="addNewCustomTable()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-medium rounded-xl shadow transition flex items-center gap-1.5">
+            <span>➕</span>
+            <span>เพิ่มโต๊ะใหม่</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tables Grid -->
+      <div id="live-tables-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Rendered dynamically by JavaScript -->
+      </div>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- TAB 3: RATE CHART (ตารางราคาเปรียบเทียบ) -->
+    <!-- ========================================== -->
+    <section id="tab-chart" class="tab-pane hidden space-y-6">
+      
+      <div class="bg-[#111f1a] p-5 rounded-2xl border border-[#1f3b32]">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+              <span>📋</span>
+              <span>ตารางอัตราค่าบริการโต๊ะสนุ๊กเกอร์</span>
+            </h2>
+            <p class="text-xs text-gray-400 mt-1">
+              ข้อมูลตามป้ายตารางราคาของร้าน (นาทีเทียบเป็นเงิน) สำหรับตรวจสอบความถูกต้อง
+            </p>
+          </div>
+          <!-- Filter / Highlight Minute -->
+          <div class="flex items-center gap-2 bg-[#0c1612] px-3 py-1.5 rounded-xl border border-[#1f3b32]">
+            <span class="text-xs text-gray-400">ค้นหานาที:</span>
+            <input type="number" id="table-search-minute" min="1" max="60" placeholder="1-60" oninput="highlightTableMinute(this.value)" class="w-16 bg-[#162720] border border-[#1f3b32] rounded px-2 py-1 text-xs text-white text-center font-mono">
+          </div>
+        </div>
+      </div>
+
+      <!-- Side-by-side Table -->
+      <div class="bg-[#111f1a] rounded-2xl border border-[#1f3b32] overflow-hidden shadow-2xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-center border-collapse">
+            <thead>
+              <tr class="border-b border-[#1f3b32] bg-[#172b23]">
+                <!-- Group 1 Header -->
+                <th colspan="2" class="py-3 px-4 border-r border-[#1f3b32] text-white">
+                  <div class="text-base sm:text-lg font-bold text-emerald-300">โต๊ะ 1, 3, V1, V2</div>
+                  <div class="text-xs font-normal text-emerald-400/80">อัตรา 100 บาท / ชั่วโมง</div>
+                </th>
+                <!-- Group 2 Header -->
+                <th colspan="2" class="py-3 px-4 text-white">
+                  <div class="text-base sm:text-lg font-bold text-amber-300">โต๊ะ 2, 4</div>
+                  <div class="text-xs font-normal text-amber-400/80">อัตรา 80 บาท / ชั่วโมง</div>
+                </th>
+              </tr>
+              <tr class="bg-[#20362b] text-xs font-semibold text-gray-200 border-b border-[#1f3b32]">
+                <th class="py-2.5 px-3 border-r border-[#1f3b32] w-1/4">นาที</th>
+                <th class="py-2.5 px-3 border-r-2 border-[#1f3b32] w-1/4 text-emerald-300">คิดเป็นเงิน (บาท)</th>
+                <th class="py-2.5 px-3 border-r border-[#1f3b32] w-1/4">นาที</th>
+                <th class="py-2.5 px-3 w-1/4 text-amber-300">คิดเป็นเงิน (บาท)</th>
+              </tr>
+            </thead>
+            <tbody id="rate-table-body" class="divide-y divide-[#172721] text-xs sm:text-sm font-mono">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="p-4 bg-[#0c1612] rounded-xl border border-[#1f3b32] text-xs text-gray-400 space-y-1">
+        <div class="font-bold text-gray-300">💡 หมายเหตุการคิดเงิน:</div>
+        <div>• 1-2 นาทีแรกไม่คิดเงิน (grace period) ตามตารางเริ่มต้นที่ 3 นาที</div>
+        <div>• เมื่อเกิน 60 นาทีขึ้นไป ระบบจะคิดชั่วโมงเต็ม (โต๊ะ 1,3,V1,V2 = 100บ./ชม., โต๊ะ 2,4 = 80บ./ชม.) บวกกับเศษนาทีตามตารางข้างต้น</div>
+      </div>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- TAB 4: BILL HISTORY (ประวัติการเช็คบิล)   -->
+    <!-- ========================================== -->
+    <section id="tab-history" class="tab-pane hidden space-y-6">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#111f1a] p-4 sm:p-5 rounded-2xl border border-[#1f3b32]">
+        <div>
+          <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+            <span>📑</span>
+            <span>ประวัติการเช็คบิล & ยอดขาย</span>
+          </h2>
+          <p class="text-xs text-gray-400 mt-0.5">รายการโต๊ะที่ปิดยอดแล้วในวันนี้ ข้อมูลจะบันทึกในอุปกรณ์นี้</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="text-right">
+            <div class="text-[11px] text-gray-400">ยอดรวมทั้งสิ้น</div>
+            <div id="history-total-income" class="text-lg font-bold text-amber-400">0 ฿</div>
+          </div>
+          <button type="button" onclick="clearBillHistory()" class="px-3 py-1.5 bg-red-900/40 hover:bg-red-800 text-red-300 text-xs rounded-lg border border-red-800 transition">
+            ล้างประวัติ
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-[#111f1a] rounded-2xl border border-[#1f3b32] overflow-hidden">
+        <div id="history-empty" class="p-12 text-center text-gray-400">
+          <div class="text-4xl mb-2">📜</div>
+          <div class="text-sm">ยังไม่มีรายการเช็คบิล</div>
+          <div class="text-xs text-gray-500 mt-1">เมื่อคุณปิดโต๊ะในหน้า "โต๊ะสด" รายการจะถูกบันทึกที่นี่โดยอัตโนมัติ</div>
+        </div>
+
+        <div id="history-table-container" class="hidden overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-[#172b23] text-gray-300 text-[11px] uppercase border-b border-[#1f3b32]">
+              <tr>
+                <th class="py-3 px-4">เวลาปิดบิล</th>
+                <th class="py-3 px-4">โต๊ะ</th>
+                <th class="py-3 px-4">เวลาเล่น</th>
+                <th class="py-3 px-4">ค่าเวลา</th>
+                <th class="py-3 px-4">เครื่องดื่ม/อื่นๆ</th>
+                <th class="py-3 px-4 font-bold text-amber-400">ยอดสุทธิ</th>
+                <th class="py-3 px-4 text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="history-rows" class="divide-y divide-[#172721] text-gray-200">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+
+  <!-- ========================================== -->
+  <!-- MODALS                                     -->
+  <!-- ========================================== -->
+
+  <!-- Modal: Checkout / Bill Detail Modal -->
+  <div id="checkout-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#13221c] border border-[#1f3b32] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+      
+      <div class="flex items-center justify-between border-b border-[#1f3b32] pb-3">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <span>🧾</span>
+          <span id="modal-table-title">สรุปค่าบริการ โต๊ะ 1</span>
+        </h3>
+        <button onclick="closeCheckoutModal()" class="text-gray-400 hover:text-white text-xl">✕</button>
+      </div>
+
+      <!-- Bill summary box -->
+      <div id="bill-receipt-content" class="bg-[#0b1411] p-4 rounded-xl border border-[#1f3b32] space-y-3 font-mono text-sm">
+        <div class="text-center border-b border-dashed border-[#1f3b32] pb-2">
+          <div class="font-bold text-base text-emerald-400">🎱 สลิปค่าบริการโต๊ะสนุ๊กเกอร์</div>
+          <div id="bill-table-name" class="text-xs text-gray-400">โต๊ะ 1 (กลุ่ม 100 บาท/ชม.)</div>
+          <div id="bill-timestamp" class="text-[11px] text-gray-500">2026-11-08 14:00</div>
+        </div>
+
+        <div class="space-y-1.5 text-xs">
+          <div class="flex justify-between text-gray-400">
+            <span>เวลาเริ่ม - สิ้นสุด:</span>
+            <span id="bill-time-range" class="text-gray-200">12:00 - 13:25</span>
+          </div>
+          <div class="flex justify-between text-gray-400">
+            <span>ระยะเวลาเล่นรวม:</span>
+            <span id="bill-duration-text" class="text-emerald-300 font-bold">1 ชม. 25 นาที</span>
+          </div>
+        </div>
+
+        <div class="border-t border-dashed border-[#1f3b32] pt-2 space-y-1 text-xs">
+          <div class="flex justify-between">
+            <span class="text-gray-400">ค่าเวลาโต๊ะ:</span>
+            <span id="bill-time-cost" class="text-white font-bold">145 ฿</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">ค่าเครื่องดื่ม/อาหาร:</span>
+            <span id="bill-extra-cost" class="text-amber-400 font-bold">0 ฿</span>
+          </div>
+        </div>
+
+        <div class="border-t-2 border-[#1f3b32] pt-2 flex justify-between items-baseline text-base">
+          <span class="font-bold text-white">ยอดรวมสุทธิ:</span>
+          <span id="bill-grand-total" class="font-extrabold text-2xl text-amber-400">145 ฿</span>
+        </div>
+      </div>
+
+      <!-- PromptPay QR Section inside Checkout -->
+      <div class="p-3 bg-[#0c1612] rounded-xl border border-[#1f3b32] flex flex-col items-center space-y-2">
+        <div class="text-xs text-emerald-400 font-medium">สแกนจ่ายผ่านพร้อมเพย์ (PromptPay)</div>
+        <div id="checkout-qrcode" class="p-2 bg-white rounded-lg shadow"></div>
+        <div class="text-[11px] text-gray-400">
+          เบอร์/เลขพร้อมเพย์: <span id="promptpay-display" class="text-gray-200 font-mono">081-234-5678</span>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="space-y-2 pt-2">
+        <button type="button" onclick="confirmFinalCheckout()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-sm shadow transition">
+          ✅ ยืนยันการคิดเงินและปิดโต๊ะ
+        </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" onclick="copyBillForLine()" class="w-full bg-[#1e3a2f] hover:bg-[#284f40] text-emerald-300 font-medium py-2 rounded-xl text-xs border border-emerald-700/50 transition flex items-center justify-center gap-1">
+            <span>💬</span>
+            <span>คัดลอกส่ง LINE</span>
+          </button>
+          <button type="button" onclick="printReceipt()" class="w-full bg-[#182d24] hover:bg-[#203c30] text-gray-200 font-medium py-2 rounded-xl text-xs border border-[#1f3b32] transition flex items-center justify-center gap-1">
+            <span>🖨️</span>
+            <span>พิมพ์ใบเสร็จ</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- Modal: PromptPay Settings & Standalone QR -->
+  <div id="qr-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#13221c] border border-[#1f3b32] rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-center">
+      <div class="flex items-center justify-between border-b border-[#1f3b32] pb-3">
+        <h3 class="text-base font-bold text-white">📱 สแกน QR Code จ่ายเงิน</h3>
+        <button onclick="closeQrModal()" class="text-gray-400 hover:text-white text-xl">✕</button>
+      </div>
+
+      <div class="text-sm text-gray-300">
+        ยอดชำระ: <span id="qr-modal-amount" class="text-2xl font-extrabold text-amber-400">0</span> บาท
+      </div>
+
+      <div class="flex justify-center p-4 bg-white rounded-xl mx-auto w-fit shadow-md">
+        <div id="standalone-qrcode"></div>
+      </div>
+
+      <div class="space-y-2 text-left bg-[#0c1612] p-3 rounded-xl border border-[#1f3b32]">
+        <label class="block text-xs text-gray-400">ตั้งค่าเลขพร้อมเพย์ของร้าน:</label>
+        <div class="flex gap-2">
+          <input type="text" id="promptpay-input" value="0812345678" placeholder="เบอร์โทร หรือ เลขบัตร/นิติบุคคล" class="w-full bg-[#162720] border border-[#1f3b32] rounded px-2.5 py-1 text-xs text-white font-mono">
+          <button onclick="savePromptPayNumber()" class="px-3 py-1 bg-emerald-700 hover:bg-emerald-600 text-white text-xs rounded">บันทึก</button>
+        </div>
+      </div>
+
+      <button onclick="closeQrModal()" class="w-full bg-[#1a332a] hover:bg-[#234538] text-gray-300 text-xs py-2 rounded-lg">
+        ปิดหน้าต่าง
+      </button>
+    </div>
+  </div>
+
+
+  <!-- Hidden Printable Slip Container -->
+  <div id="print-area" class="hidden">
+    <div style="max-width: 300px; margin: 0 auto; padding: 15px; font-family: monospace; font-size: 13px; line-height: 1.4; color: #000;">
+      <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
+        <h2 style="font-size: 16px; margin: 0; font-weight: bold;">🎱 สนุ๊กเกอร์ คลับ</h2>
+        <div id="print-table-info" style="font-size: 12px;">โต๊ะ 1</div>
+        <div id="print-time-info" style="font-size: 11px;">เวลา: 2026-11-08 14:00</div>
+      </div>
+      <div style="margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between;">
+          <span>เวลาเริ่ม-จบ:</span>
+          <span id="print-range">12:00 - 13:25</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span>ระยะเวลาเล่น:</span>
+          <span id="print-duration">1 ชม. 25 น.</span>
+        </div>
+      </div>
+      <div style="border-top: 1px dashed #000; padding-top: 8px; margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between;">
+          <span>ค่าเวลาโต๊ะ:</span>
+          <span id="print-time-cost">145 บาท</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span>เครื่องดื่ม/บริการ:</span>
+          <span id="print-extra-cost">0 บาท</span>
+        </div>
+      </div>
+      <div style="border-top: 2px solid #000; padding-top: 8px; display: flex; justify-content: space-between; font-weight: bold; font-size: 16px;">
+        <span>ยอดรวมสุทธิ:</span>
+        <span id="print-total-cost">145 บาท</span>
+      </div>
+      <div style="text-align: center; margin-top: 15px; font-size: 11px; border-top: 1px dashed #000; padding-top: 8px;">
+        ขอบคุณที่ใช้บริการครับ 🙏
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Core Application Logic -->
+  <script>
+    /* ========================================================================
+       1. PRICING TABLE DATA (Exact replication from IMG_2411.jpg)
+       ======================================================================== */
+    // Group 1: โต๊ะ 1, 3, V1, V2 (Rate 100 Baht/Hour)
+    const GROUP1_TABLE = [
+      { minMinutes: 3, maxMinutes: 3, price: 5, label: "3" },
+      { minMinutes: 4, maxMinutes: 6, price: 10, label: "4, 5, 6" },
+      { minMinutes: 7, maxMinutes: 9, price: 15, label: "7, 8, 9" },
+      { minMinutes: 10, maxMinutes: 12, price: 20, label: "10, 11, 12" },
+      { minMinutes: 13, maxMinutes: 15, price: 25, label: "13, 14, 15" },
+      { minMinutes: 16, maxMinutes: 18, price: 30, label: "16, 17, 18" },
+      { minMinutes: 19, maxMinutes: 21, price: 35, label: "19, 20, 21" },
+      { minMinutes: 22, maxMinutes: 24, price: 40, label: "22, 23, 24" },
+      { minMinutes: 25, maxMinutes: 27, price: 45, label: "25, 26, 27" },
+      { minMinutes: 28, maxMinutes: 30, price: 50, label: "28, 29, 30" },
+      { minMinutes: 31, maxMinutes: 33, price: 55, label: "31, 32, 33" },
+      { minMinutes: 34, maxMinutes: 36, price: 60, label: "34, 35, 36" },
+      { minMinutes: 37, maxMinutes: 39, price: 65, label: "37, 38, 39" },
+      { minMinutes: 40, maxMinutes: 42, price: 70, label: "40, 41, 42" },
+      { minMinutes: 43, maxMinutes: 45, price: 75, label: "43, 44, 45" },
+      { minMinutes: 46, maxMinutes: 48, price: 80, label: "46, 47, 48" },
+      { minMinutes: 49, maxMinutes: 51, price: 85, label: "49, 50, 51" },
+      { minMinutes: 52, maxMinutes: 54, price: 90, label: "52, 53, 54" },
+      { minMinutes: 55, maxMinutes: 57, price: 95, label: "55, 56, 57" },
+      { minMinutes: 58, maxMinutes: 60, price: 100, label: "58, 59, 60" }
+    ];
+
+    // Group 2: โต๊ะ 2, 4 (Rate 80 Baht/Hour)
+    const GROUP2_TABLE = [
+      { minMinutes: 3, maxMinutes: 5, price: 5, label: "3, 4, 5" },
+      { minMinutes: 6, maxMinutes: 8, price: 10, label: "6, 7, 8" },
+      { minMinutes: 9, maxMinutes: 12, price: 15, label: "9, 10, 11, 12" },
+      { minMinutes: 13, maxMinutes: 16, price: 20, label: "13, 14, 15, 16" },
+      { minMinutes: 17, maxMinutes: 19, price: 25, label: "17, 18, 19" },
+      { minMinutes: 20, maxMinutes: 23, price: 30, label: "20, 21, 22, 23" },
+      { minMinutes: 24, maxMinutes: 26, price: 35, label: "24, 25, 26" },
+      { minMinutes: 27, maxMinutes: 30, price: 40, label: "27, 28, 29, 30" },
+      { minMinutes: 31, maxMinutes: 33, price: 45, label: "31, 32, 33" },
+      { minMinutes: 34, maxMinutes: 37, price: 50, label: "34, 35, 36, 37" },
+      { minMinutes: 38, maxMinutes: 40, price: 55, label: "38, 39, 40" },
+      { minMinutes: 41, maxMinutes: 44, price: 60, label: "41, 42, 43, 44" },
+      { minMinutes: 45, maxMinutes: 47, price: 65, label: "45, 46, 47" },
+      { minMinutes: 48, maxMinutes: 51, price: 70, label: "48, 49, 50, 51" },
+      { minMinutes: 52, maxMinutes: 55, price: 75, label: "52, 53, 54, 55" },
+      { minMinutes: 56, maxMinutes: 60, price: 80, label: "56, 57, 58, 59, 60" }
+    ];
+
+    /* ========================================================================
+       2. CALCULATION ENGINE
+       ======================================================================== */
+    function calculateSnookerCost(tableGroup, totalMinutes) {
+      if (totalMinutes <= 0) {
+        return {
+          totalMinutes: 0,
+          fullHours: 0,
+          remMinutes: 0,
+          hourlyRate: tableGroup === 'group1' ? 100 : 80,
+          hourCost: 0,
+          minuteCost: 0,
+          totalCost: 0,
+          matchedRow: null
+        };
+      }
+
+      const hourlyRate = tableGroup === 'group1' ? 100 : 80;
+      const rateTable = tableGroup === 'group1' ? GROUP1_TABLE : GROUP2_TABLE;
+
+      const fullHours = Math.floor(totalMinutes / 60);
+      const remMinutes = totalMinutes % 60;
+      const hourCost = fullHours * hourlyRate;
+
+      let minuteCost = 0;
+      let matchedRow = null;
+
+      if (remMinutes >= 3) {
+        matchedRow = rateTable.find(item => remMinutes >= item.minMinutes && remMinutes <= item.maxMinutes);
+        if (matchedRow) {
+          minuteCost = matchedRow.price;
+        } else {
+          minuteCost = hourlyRate;
+        }
+      } else if (remMinutes > 0) {
+        // Under 3 minutes -> 0 Baht free
+        minuteCost = 0;
+      }
+
+      const totalCost = hourCost + minuteCost;
+
+      return {
+        totalMinutes,
+        fullHours,
+        remMinutes,
+        hourlyRate,
+        hourCost,
+        minuteCost,
+        totalCost,
+        matchedRow
+      };
+    }
+
+    /* ========================================================================
+       3. PROMPTPAY QR GENERATOR HELPERS
+       ======================================================================== */
+    function getStoredPromptPay() {
+      return localStorage.getItem('snooker_promptpay_no') || '0812345678';
+    }
+
+    function savePromptPayNumber() {
+      const input = document.getElementById('promptpay-input').value.trim();
+      if (input) {
+        localStorage.setItem('snooker_promptpay_no', input);
+        document.getElementById('promptpay-display').textContent = input;
+        alert('บันทึกเลขพร้อมเพย์เรียบร้อยแล้ว: ' + input);
+      }
+    }
+
+    // CRC16-CCITT for PromptPay payload
+    function crc16(data) {
+      let crc = 0xFFFF;
+      for (let i = 0; i < data.length; i++) {
+        let c = data.charCodeAt(i);
+        crc ^= c << 8;
+        for (let j = 0; j < 8; j++) {
+          if (crc & 0x8000) {
+            crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
+          } else {
+            crc = (crc << 1) & 0xFFFF;
+          }
+        }
+      }
+      return crc.toString(16).toUpperCase().padStart(4, '0');
+    }
+
+    function generatePromptPayPayload(phoneOrId, amount) {
+      const cleanTarget = phoneOrId.replace(/[^0-9]/g, '');
+      let targetPayload = '';
+
+      if (cleanTarget.length === 10) {
+        // Phone number: prefix with 0066 and drop initial 0
+        const formattedPhone = '0066' + cleanTarget.substring(1);
+        targetPayload = '01' + formattedPhone.length.toString().padStart(2, '0') + formattedPhone;
+      } else {
+        // Citizen ID or Tax ID (13 digits)
+        targetPayload = '02' + cleanTarget.length.toString().padStart(2, '0') + cleanTarget;
+      }
+
+      const merchantInfo = '0016A000000677010111' + targetPayload;
+      const fMerchant = '29' + merchantInfo.length.toString().padStart(2, '0') + merchantInfo;
+
+      let payload = '000201' + // Payload Format Indicator
+                    '010212' + // Point of Initiation: Dynamic (12)
+                    fMerchant +
+                    '5303764'; // Currency: THB (764)
+
+      if (amount && amount > 0) {
+        const amtStr = parseFloat(amount).toFixed(2);
+        payload += '54' + amtStr.length.toString().padStart(2, '0') + amtStr;
+      }
+
+      payload += '5802TH' + // Country Code: TH
+                 '6304';   // CRC placeholder
+
+      const checksum = crc16(payload);
+      return payload + checksum;
+    }
+
+    function renderQr(elementId, amount) {
+      const container = document.getElementById(elementId);
+      container.innerHTML = '';
+      const promptPayNo = getStoredPromptPay();
+      const payload = generatePromptPayPayload(promptPayNo, amount);
+
+      if (typeof QRCode !== 'undefined') {
+        try {
+          new QRCode(container, {
+            text: payload,
+            width: 160,
+            height: 160,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        } catch (e) {
+          showQrTextFallback(container, promptPayNo, amount);
+        }
+      } else {
+        showQrTextFallback(container, promptPayNo, amount);
+      }
+    }
+
+    function showQrTextFallback(container, promptPayNo, amount) {
+      container.innerHTML = `
+        <div class="p-3 text-center text-gray-900 bg-white rounded">
+          <div class="text-xs font-bold text-emerald-800">โอนเงินผ่านพร้อมเพย์</div>
+          <div class="text-base font-bold text-gray-900 my-1">${promptPayNo}</div>
+          <div class="text-xs text-gray-700">ยอดชำระ: <strong class="text-emerald-700 font-bold">${amount.toLocaleString()}</strong> บาท</div>
+        </div>
+      `;
+    }
+
+    function copyBillForLine() {
+      if (!currentCheckoutTable) return;
+      const table = currentCheckoutTable;
+      const elapsedSec = getTableElapsedTime(table);
+      const totalMinutes = Math.floor(elapsedSec / 60);
+      const calc = calculateSnookerCost(table.group, totalMinutes);
+      const itemsTotal = (table.items || []).reduce((sum, item) => sum + item.price, 0);
+      const grandTotal = calc.totalCost + itemsTotal;
+
+      const startDate = new Date(table.startTime || Date.now());
+      const endDate = new Date();
+      const startStr = `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`;
+      const endStr = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
+      const promptPayNo = getStoredPromptPay();
+
+      let text = `🎱 *บิลค่าบริการโต๊ะสนุ๊กเกอร์*\n`;
+      text += `📍 ${table.name} (${table.group === 'group1' ? '100฿/ชม.' : '80฿/ชม.'})\n`;
+      text += `⏰ เวลา: ${startStr} - ${endStr} (${calc.fullHours} ชม. ${calc.remMinutes} นาที)\n`;
+      text += `⏱️ ค่าเวลา: ${calc.totalCost} บาท\n`;
+      if (itemsTotal > 0) {
+        text += `🥤 ค่าเครื่องดื่ม/บริการ: ${itemsTotal} บาท\n`;
+      }
+      text += `💰 *ยอดรวมสุทธิ: ${grandTotal} บาท*\n`;
+      text += `📲 พร้อมเพย์: ${promptPayNo}\n`;
+      text += `ขอบคุณที่ใช้บริการครับ 🙏`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert('คัดลอกข้อความสรุปบิลแล้ว! สามารถกดวาง (Paste) ส่งใน LINE ได้ทันที');
+      }).catch(() => {
+        prompt('คัดลอกข้อความด้านล่างนี้:', text);
+      });
+    }
+
+    function adjustTableStartTime(tableId) {
+      const table = tables.find(t => t.id === tableId);
+      if (!table || !table.startTime) return;
+      const d = new Date(table.startTime);
+      const currentH = String(d.getHours()).padStart(2, '0');
+      const currentM = String(d.getMinutes()).padStart(2, '0');
+      const newTime = prompt(`แก้ไขเวลาเปิดโต๊ะ (${table.name}) ในรูปแบบ HH:mm (เช่น 14:10):`, `${currentH}:${currentM}`);
+      if (!newTime || !newTime.includes(':')) return;
+      
+      const [h, m] = newTime.split(':').map(Number);
+      if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) {
+        alert('รูปแบบเวลาไม่ถูกต้อง กรุณาระบุเป็น HH:mm');
+        return;
+      }
+      const newStartDate = new Date(table.startTime);
+      newStartDate.setHours(h, m, 0, 0);
+      table.startTime = newStartDate.getTime();
+      saveTablesState();
+      renderTablesGrid();
+    }
+
+    /* ========================================================================
+       4. QUICK CALCULATOR UI STATE & HANDLERS
+       ======================================================================== */
+    let calcMode = 'decimalHours'; // 'decimalHours' | 'timeRange' | 'duration'
+    let quickExtraCost = 0;
+
+    function setCalcMode(mode) {
+      calcMode = mode;
+      const btnDecimal = document.getElementById('btn-mode-decimal');
+      const btnRange = document.getElementById('btn-mode-range');
+      const btnDuration = document.getElementById('btn-mode-duration');
+
+      const viewDecimal = document.getElementById('calc-mode-decimal');
+      const viewRange = document.getElementById('calc-mode-range');
+      const viewDuration = document.getElementById('calc-mode-duration');
+
+      [btnDecimal, btnRange, btnDuration].forEach(b => {
+        if (b) {
+          b.className = "px-2.5 sm:px-3 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-colors";
+        }
+      });
+      [viewDecimal, viewRange, viewDuration].forEach(v => {
+        if (v) v.classList.add('hidden');
+      });
+
+      if (mode === 'decimalHours') {
+        if (btnDecimal) btnDecimal.className = "px-2.5 sm:px-3 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white transition-colors";
+        if (viewDecimal) viewDecimal.classList.remove('hidden');
+      } else if (mode === 'timeRange') {
+        if (btnRange) btnRange.className = "px-2.5 sm:px-3 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white transition-colors";
+        if (viewRange) viewRange.classList.remove('hidden');
+      } else {
+        if (btnDuration) btnDuration.className = "px-2.5 sm:px-3 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white transition-colors";
+        if (viewDuration) viewDuration.classList.remove('hidden');
+      }
+      onCalcInputChange();
+    }
+
+    function setDecimalHours(val) {
+      document.getElementById('calc-decimal-hours').value = val;
+      setCalcMode('decimalHours');
+    }
+
+    function setCurrentTimeToInput(inputId) {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById(inputId).value = `${hours}:${minutes}`;
+      onCalcInputChange();
+    }
+
+    function addMinutesToCalcEnd(minsToAdd) {
+      const startVal = document.getElementById('calc-start-time').value;
+      if (!startVal) return;
+      const [h, m] = startVal.split(':').map(Number);
+      const startDate = new Date();
+      startDate.setHours(h, m, 0, 0);
+
+      const endDate = new Date(startDate.getTime() + minsToAdd * 60000);
+      const endHours = String(endDate.getHours()).padStart(2, '0');
+      const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+      document.getElementById('calc-end-time').value = `${endHours}:${endMinutes}`;
+      onCalcInputChange();
+    }
+
+    function setQuickDuration(hours, minutes) {
+      document.getElementById('calc-hours').value = hours;
+      document.getElementById('calc-minutes').value = minutes;
+      onCalcInputChange();
+    }
+
+    function toggleQuickExtraItems() {
+      const el = document.getElementById('quick-extra-container');
+      const icon = document.getElementById('quick-extra-toggle-icon');
+      if (el.classList.contains('hidden')) {
+        el.classList.remove('hidden');
+        icon.textContent = '▲';
+      } else {
+        el.classList.add('hidden');
+        icon.textContent = '▼';
+      }
+    }
+
+    function addQuickExtra(amount, label) {
+      const input = document.getElementById('quick-extra-manual');
+      const current = parseFloat(input.value) || 0;
+      input.value = current + amount;
+      onCalcInputChange();
+    }
+
+    function clearQuickExtra() {
+      document.getElementById('quick-extra-manual').value = '';
+      onCalcInputChange();
+    }
+
+    let lastCalcResult = null;
+
+    function parseThaiTimeInput(inputStr) {
+      if (!inputStr) return { hours: 0, minutes: 0, totalMinutes: 0 };
+      const clean = inputStr.trim().replace(':', '.').replace(',', '.');
+      if (clean.includes('.')) {
+        const parts = clean.split('.');
+        const hours = parseInt(parts[0]) || 0;
+        let minStr = parts[1] || '0';
+        // e.g. "1.5" shorthand for "1.50"
+        if (minStr.length === 1) {
+          minStr = minStr + '0';
+        }
+        const minutes = parseInt(minStr) || 0;
+        const totalMinutes = (hours * 60) + minutes;
+        return { hours, minutes, totalMinutes };
+      } else {
+        const hours = parseInt(clean) || 0;
+        return { hours, minutes: 0, totalMinutes: hours * 60 };
+      }
+    }
+
+    function onCalcInputChange() {
+      // 1. Get Table Group
+      const groupInput = document.querySelector('input[name="calc-table-group"]:checked');
+      const tableGroup = groupInput ? groupInput.value : 'group1';
+
+      // Update Group Labels Style
+      const group1Label = document.querySelector('.group1-label');
+      const group2Label = document.querySelector('.group2-label');
+      if (tableGroup === 'group1') {
+        group1Label.className = "relative flex flex-col p-4 rounded-xl border cursor-pointer transition-all duration-200 group1-label border-emerald-500 bg-emerald-950/40";
+        group2Label.className = "relative flex flex-col p-4 rounded-xl border cursor-pointer transition-all duration-200 group2-label border-[#1f3b32] bg-[#0d1814] hover:border-gray-500";
+        document.getElementById('res-group-badge').textContent = "โต๊ะ 1, 3, V1, V2 (100 บ./ชม.)";
+        document.getElementById('res-group-badge').className = "px-2.5 py-0.5 rounded text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+      } else {
+        group2Label.className = "relative flex flex-col p-4 rounded-xl border cursor-pointer transition-all duration-200 group2-label border-amber-500 bg-amber-950/40";
+        group1Label.className = "relative flex flex-col p-4 rounded-xl border cursor-pointer transition-all duration-200 group1-label border-[#1f3b32] bg-[#0d1814] hover:border-gray-500";
+        document.getElementById('res-group-badge').textContent = "โต๊ะ 2, 4 (80 บ./ชม.)";
+        document.getElementById('res-group-badge').className = "px-2.5 py-0.5 rounded text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30";
+      }
+
+      // 2. Compute Total Minutes
+      let totalMinutes = 0;
+      if (calcMode === 'decimalHours') {
+        const rawStr = document.getElementById('calc-decimal-hours').value || '';
+        const parsed = parseThaiTimeInput(rawStr);
+        totalMinutes = parsed.totalMinutes;
+        const convertedEl = document.getElementById('decimal-converted-text');
+        if (convertedEl) {
+          convertedEl.textContent = `${parsed.hours} ชั่วโมง ${parsed.minutes} นาที (รวม ${totalMinutes} นาที)`;
+        }
+      } else if (calcMode === 'timeRange') {
+        const startVal = document.getElementById('calc-start-time').value;
+        const endVal = document.getElementById('calc-end-time').value;
+        if (startVal && endVal) {
+          const [sh, sm] = startVal.split(':').map(Number);
+          const [eh, em] = endVal.split(':').map(Number);
+          let startMin = sh * 60 + sm;
+          let endMin = eh * 60 + em;
+          if (endMin < startMin) {
+            // crossed midnight
+            endMin += 24 * 60;
+          }
+          totalMinutes = endMin - startMin;
+        }
+      } else {
+        const h = parseInt(document.getElementById('calc-hours').value) || 0;
+        const m = parseInt(document.getElementById('calc-minutes').value) || 0;
+        totalMinutes = (h * 60) + m;
+      }
+
+      // 3. Extra cost
+      const manualExtra = parseFloat(document.getElementById('quick-extra-manual').value) || 0;
+
+      // 4. Calculate table cost
+      const calcRes = calculateSnookerCost(tableGroup, totalMinutes);
+      const grandTotal = calcRes.totalCost + manualExtra;
+
+      lastCalcResult = {
+        ...calcRes,
+        tableGroup,
+        extraCost: manualExtra,
+        grandTotal
+      };
+
+      // 5. Update UI
+      document.getElementById('res-total-price').textContent = grandTotal.toLocaleString();
+      document.getElementById('res-duration-text').textContent = `เวลาเล่น: ${calcRes.fullHours} ชม. ${calcRes.remMinutes} นาที (รวม ${totalMinutes} นาที)`;
+      document.getElementById('res-full-hours').textContent = calcRes.fullHours;
+      document.getElementById('res-hourly-rate').textContent = calcRes.hourlyRate;
+      document.getElementById('res-hour-cost').textContent = calcRes.hourCost.toLocaleString();
+      document.getElementById('res-rem-minutes').textContent = calcRes.remMinutes;
+      document.getElementById('res-minute-cost').textContent = calcRes.minuteCost.toLocaleString();
+
+      const rowInfoEl = document.getElementById('res-table-row-info');
+      const explainEl = document.getElementById('res-explain');
+
+      if (calcRes.matchedRow) {
+        rowInfoEl.textContent = `ตรงแถว [${calcRes.matchedRow.label} น.] = ${calcRes.matchedRow.price} บาท`;
+        explainEl.innerHTML = `เศษ ${calcRes.remMinutes} นาที อยู่ในช่วง <strong>[${calcRes.matchedRow.label} นาที]</strong> คิดเป็นเงิน <strong>${calcRes.matchedRow.price} บาท</strong>`;
+      } else if (calcRes.remMinutes > 0 && calcRes.remMinutes < 3) {
+        rowInfoEl.textContent = `1-2 นาทีแรก ฟรี (0 บาท)`;
+        explainEl.innerHTML = `เศษ ${calcRes.remMinutes} นาที น้อยกว่า 3 นาที ทางร้านไม่คิดเงิน (0 บาท)`;
+      } else {
+        rowInfoEl.textContent = `ไม่มีเศษนาที (0 บาท)`;
+        explainEl.innerHTML = `ชั่วโมงเต็มพอดี ไม่มีเศษนาที`;
+      }
+
+      const extraRowEl = document.getElementById('res-extra-row');
+      if (manualExtra > 0) {
+        extraRowEl.classList.remove('hidden');
+        document.getElementById('res-extra-cost').textContent = manualExtra.toLocaleString();
+      } else {
+        extraRowEl.classList.add('hidden');
+      }
+    }
+
+    function openQrModalFromQuickCalc() {
+      if (!lastCalcResult || lastCalcResult.grandTotal <= 0) {
+        alert('กรุณาระบุเวลาเพื่อคำนวณยอดเงินก่อนสร้าง QR Code');
+        return;
+      }
+      document.getElementById('qr-modal-amount').textContent = lastCalcResult.grandTotal.toLocaleString();
+      document.getElementById('promptpay-input').value = getStoredPromptPay();
+      renderQr('standalone-qrcode', lastCalcResult.grandTotal);
+      document.getElementById('qr-modal').classList.remove('hidden');
+    }
+
+    function printQuickCalcSlip() {
+      if (!lastCalcResult) return;
+      const now = new Date();
+      const timeStr = now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+      document.getElementById('print-table-info').textContent = lastCalcResult.tableGroup === 'group1' ? 'โต๊ะ 1, 3, V1, V2 (100บ./ชม.)' : 'โต๊ะ 2, 4 (80บ./ชม.)';
+      document.getElementById('print-time-info').textContent = `วันที่: ${timeStr}`;
+      
+      let rangeText = '-';
+      if (calcMode === 'decimalHours') {
+        const parsed = parseThaiTimeInput(document.getElementById('calc-decimal-hours').value);
+        rangeText = `${parsed.hours}.${String(parsed.minutes).padStart(2, '0')} น. (${parsed.hours} ชม. ${parsed.minutes} น.)`;
+      } else if (calcMode === 'timeRange') {
+        rangeText = `${document.getElementById('calc-start-time').value} - ${document.getElementById('calc-end-time').value}`;
+      } else {
+        rangeText = `${document.getElementById('calc-hours').value} ชม. ${document.getElementById('calc-minutes').value} นาที`;
+      }
+      document.getElementById('print-range').textContent = rangeText;
+      document.getElementById('print-duration').textContent = `${lastCalcResult.fullHours} ชม. ${lastCalcResult.remMinutes} น.`;
+      document.getElementById('print-time-cost').textContent = `${lastCalcResult.totalCost} บาท`;
+      document.getElementById('print-extra-cost').textContent = `${lastCalcResult.extraCost} บาท`;
+      document.getElementById('print-total-cost').textContent = `${lastCalcResult.grandTotal} บาท`;
+
+      window.print();
+    }
+
+    /* ========================================================================
+       5. LIVE SNOOKER TABLES MANAGER (โต๊ะสด)
+       ======================================================================== */
+    const DEFAULT_TABLES = [
+      { id: 'T1', name: 'โต๊ะ 1', group: 'group1', status: 'available', startTime: null, pausedTime: 0, items: [] },
+      { id: 'T2', name: 'โต๊ะ 2', group: 'group2', status: 'available', startTime: null, pausedTime: 0, items: [] },
+      { id: 'T3', name: 'โต๊ะ 3', group: 'group1', status: 'available', startTime: null, pausedTime: 0, items: [] },
+      { id: 'T4', name: 'โต๊ะ 4', group: 'group2', status: 'available', startTime: null, pausedTime: 0, items: [] },
+      { id: 'V1', name: 'โต๊ะ V1 (VIP)', group: 'group1', status: 'available', startTime: null, pausedTime: 0, items: [] },
+      { id: 'V2', name: 'โต๊ะ V2 (VIP)', group: 'group1', status: 'available', startTime: null, pausedTime: 0, items: [] }
+    ];
+
+    let tables = [];
+
+    function loadTablesState() {
+      const saved = localStorage.getItem('snooker_live_tables');
+      if (saved) {
+        try {
+          tables = JSON.parse(saved);
+        } catch (e) {
+          tables = JSON.parse(JSON.stringify(DEFAULT_TABLES));
+        }
+      } else {
+        tables = JSON.parse(JSON.stringify(DEFAULT_TABLES));
+      }
+      renderTablesGrid();
+    }
+
+    function saveTablesState() {
+      localStorage.setItem('snooker_live_tables', JSON.stringify(tables));
+      updateActiveBadge();
+    }
+
+    function updateActiveBadge() {
+      const activeCount = tables.filter(t => t.status === 'playing').length;
+      document.getElementById('active-tables-count').textContent = activeCount;
+      const badge = document.getElementById('active-tables-badge');
+      if (activeCount > 0) {
+        badge.textContent = activeCount;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    function getTableElapsedTime(table) {
+      if (!table.startTime || table.status === 'available') return 0;
+      const now = Date.now();
+      return Math.max(0, Math.floor((now - table.startTime) / 1000)); // seconds
+    }
+
+    function startTable(tableId) {
+      const table = tables.find(t => t.id === tableId);
+      if (!table) return;
+      table.status = 'playing';
+      table.startTime = Date.now();
+      saveTablesState();
+      renderTablesGrid();
+    }
+
+    function togglePauseTable(tableId) {
+      const table = tables.find(t => t.id === tableId);
+      if (!table) return;
+      if (table.status === 'playing') {
+        table.status = 'paused';
+      } else if (table.status === 'paused') {
+        table.status = 'playing';
+      }
+      saveTablesState();
+      renderTablesGrid();
+    }
+
+    function addDrinkToTable(tableId, name, price) {
+      const table = tables.find(t => t.id === tableId);
+      if (!table) return;
+      table.items.push({ name, price, time: Date.now() });
+      saveTablesState();
+      renderTablesGrid();
+    }
+
+    function promptCustomDrink(tableId) {
+      const name = prompt('ระบุชื่อรายการ (เช่น ขนม, บุหรี่):');
+      if (!name) return;
+      const priceStr = prompt(`ระบุราคาของ "${name}" (บาท):`);
+      const price = parseFloat(priceStr);
+      if (isNaN(price) || price <= 0) {
+        alert('กรุณาระบุราคาเป็นตัวเลขที่ถูกต้อง');
+        return;
+      }
+      addDrinkToTable(tableId, name, price);
+    }
+
+    function removeDrinkFromTable(tableId, index) {
+      const table = tables.find(t => t.id === tableId);
+      if (!table || !table.items) return;
+      table.items.splice(index, 1);
+      saveTablesState();
+      renderTablesGrid();
+    }
+
+    let currentCheckoutTable = null;
+
+    function openCheckoutModal(tableId) {
+      const table = tables.find(t => t.id === tableId);
+      if (!table) return;
+      currentCheckoutTable = table;
+
+      const elapsedSec = getTableElapsedTime(table);
+      const totalMinutes = Math.floor(elapsedSec / 60);
+      const calc = calculateSnookerCost(table.group, totalMinutes);
+
+      const itemsTotal = (table.items || []).reduce((sum, item) => sum + item.price, 0);
+      const grandTotal = calc.totalCost + itemsTotal;
+
+      const startDate = new Date(table.startTime || Date.now());
+      const endDate = new Date();
+      const startStr = `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`;
+      const endStr = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
+
+      document.getElementById('modal-table-title').textContent = `สรุปค่าบริการ ${table.name}`;
+      document.getElementById('bill-table-name').textContent = `${table.name} (${table.group === 'group1' ? '100 บ./ชม.' : '80 บ./ชม.'})`;
+      document.getElementById('bill-timestamp').textContent = endDate.toLocaleString('th-TH');
+      document.getElementById('bill-time-range').textContent = `${startStr} - ${endStr}`;
+      document.getElementById('bill-duration-text').textContent = `${calc.fullHours} ชม. ${calc.remMinutes} นาที (${totalMinutes} นาที)`;
+      document.getElementById('bill-time-cost').textContent = `${calc.totalCost.toLocaleString()} ฿`;
+      document.getElementById('bill-extra-cost').textContent = `${itemsTotal.toLocaleString()} ฿`;
+      document.getElementById('bill-grand-total').textContent = `${grandTotal.toLocaleString()} ฿`;
+      document.getElementById('promptpay-display').textContent = getStoredPromptPay();
+
+      // Render PromptPay QR
+      renderQr('checkout-qrcode', grandTotal);
+
+      document.getElementById('checkout-modal').classList.remove('hidden');
+    }
+
+    function closeCheckoutModal() {
+      document.getElementById('checkout-modal').classList.add('hidden');
+      currentCheckoutTable = null;
+    }
+
+    function confirmFinalCheckout() {
+      if (!currentCheckoutTable) return;
+      const table = currentCheckoutTable;
+
+      const elapsedSec = getTableElapsedTime(table);
+      const totalMinutes = Math.floor(elapsedSec / 60);
+      const calc = calculateSnookerCost(table.group, totalMinutes);
+      const itemsTotal = (table.items || []).reduce((sum, item) => sum + item.price, 0);
+      const grandTotal = calc.totalCost + itemsTotal;
+
+      // Save to Bill History
+      addBillHistory({
+        id: 'BILL-' + Date.now().toString().slice(-6),
+        tableName: table.name,
+        group: table.group,
+        startTime: table.startTime,
+        endTime: Date.now(),
+        totalMinutes,
+        fullHours: calc.fullHours,
+        remMinutes: calc.remMinutes,
+        timeCost: calc.totalCost,
+        extraCost: itemsTotal,
+        grandTotal,
+        items: table.items || []
+      });
+
+      // Reset Table
+      table.status = 'available';
+      table.startTime = null;
+      table.items = [];
+
+      saveTablesState();
+      renderTablesGrid();
+      closeCheckoutModal();
+      alert(`บันทึกการเช็คบิล ${table.name} เรียบร้อยแล้ว (ยอด ${grandTotal.toLocaleString()} บาท)`);
+    }
+
+    function printReceipt() {
+      if (!currentCheckoutTable) return;
+      const table = currentCheckoutTable;
+      const elapsedSec = getTableElapsedTime(table);
+      const totalMinutes = Math.floor(elapsedSec / 60);
+      const calc = calculateSnookerCost(table.group, totalMinutes);
+      const itemsTotal = (table.items || []).reduce((sum, item) => sum + item.price, 0);
+      const grandTotal = calc.totalCost + itemsTotal;
+
+      const startDate = new Date(table.startTime || Date.now());
+      const endDate = new Date();
+      const startStr = `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`;
+      const endStr = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
+
+      document.getElementById('print-table-info').textContent = `${table.name} (${table.group === 'group1' ? '100 บ./ชม.' : '80 บ./ชม.'})`;
+      document.getElementById('print-time-info').textContent = `วันที่: ${endDate.toLocaleString('th-TH')}`;
+      document.getElementById('print-range').textContent = `${startStr} - ${endStr}`;
+      document.getElementById('print-duration').textContent = `${calc.fullHours} ชม. ${calc.remMinutes} น.`;
+      document.getElementById('print-time-cost').textContent = `${calc.totalCost} บาท`;
+      document.getElementById('print-extra-cost').textContent = `${itemsTotal} บาท`;
+      document.getElementById('print-total-cost').textContent = `${grandTotal} บาท`;
+
+      window.print();
+    }
+
+    function addNewCustomTable() {
+      const name = prompt('กรุณาตั้งชื่อโต๊ะใหม่ (เช่น โต๊ะ 5 หรือ VIP 3):', `โต๊ะ ${tables.length + 1}`);
+      if (!name) return;
+      const isGroup1 = confirm(`เลือกอัตราค่าบริการสำหรับ "${name}":\n\n[ ตกลง (OK) ] = 100 บาท/ชม. (เหมือน โต๊ะ 1, 3, V1, V2)\n[ ยกเลิก (Cancel) ] = 80 บาท/ชม. (เหมือน โต๊ะ 2, 4)`);
+      
+      const newTable = {
+        id: 'CT_' + Date.now(),
+        name: name,
+        group: isGroup1 ? 'group1' : 'group2',
+        status: 'available',
+        startTime: null,
+        pausedTime: 0,
+        items: []
+      };
+
+      tables.push(newTable);
+      saveTablesState();
+      renderTablesGrid();
+    }
+
+    function renderTablesGrid() {
+      const container = document.getElementById('live-tables-grid');
+      container.innerHTML = '';
+
+      tables.forEach(table => {
+        const isPlaying = table.status === 'playing';
+        const isPaused = table.status === 'paused';
+        const isAvailable = table.status === 'available';
+
+        const elapsedSec = getTableElapsedTime(table);
+        const totalMinutes = Math.floor(elapsedSec / 60);
+        const secRem = elapsedSec % 60;
+        const calc = calculateSnookerCost(table.group, totalMinutes);
+        const itemsTotal = (table.items || []).reduce((sum, item) => sum + item.price, 0);
+        const grandTotal = calc.totalCost + itemsTotal;
+
+        // Start time string
+        let startTimeStr = '-';
+        if (table.startTime) {
+          const d = new Date(table.startTime);
+          startTimeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+
+        const card = document.createElement('div');
+        card.className = `rounded-2xl border p-5 shadow-xl transition-all relative overflow-hidden flex flex-col justify-between ${
+          isPlaying 
+            ? 'bg-gradient-to-b from-[#182e24] to-[#101e18] border-emerald-500/80 shadow-emerald-950/50' 
+            : isPaused
+            ? 'bg-gradient-to-b from-[#2b2214] to-[#17140f] border-amber-600/80'
+            : 'bg-[#12201a] border-[#1f3b32]'
+        }`;
+
+        card.innerHTML = `
+          <div>
+            <!-- Top Card Header -->
+            <div class="flex items-center justify-between mb-3 border-b border-[#1f3b32] pb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full ${isPlaying ? 'bg-emerald-400 animate-ping' : isPaused ? 'bg-amber-400' : 'bg-gray-600'}"></span>
+                <h3 class="text-lg font-bold text-white">${table.name}</h3>
+              </div>
+              <span class="text-xs px-2 py-0.5 rounded font-semibold ${
+                table.group === 'group1' 
+                  ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/50' 
+                  : 'bg-amber-900/60 text-amber-300 border border-amber-700/50'
+              }">
+                ${table.group === 'group1' ? '100 ฿/ชม.' : '80 ฿/ชม.'}
+              </span>
+            </div>
+
+            <!-- Timer / Status Display -->
+            <div class="py-3 px-4 rounded-xl bg-[#091510] border border-[#1b3127] mb-4 text-center">
+              ${isAvailable ? `
+                <div class="text-gray-400 text-sm font-medium py-3">🟢 โต๊ะว่าง พร้อมให้บริการ</div>
+              ` : `
+                <div class="flex justify-between items-center text-xs text-gray-400 mb-1">
+                  <span>เริ่ม: ${startTimeStr} <button onclick="adjustTableStartTime('${table.id}')" title="แก้ไขเวลาเริ่ม" class="text-gray-400 hover:text-emerald-300 ml-1 text-[11px]">✏️</button></span>
+                  <span class="${isPlaying ? 'text-emerald-400 font-semibold' : 'text-amber-400'}">
+                    ${isPlaying ? 'กำลังเล่น' : 'พักชั่วคราว'}
+                  </span>
+                </div>
+                <div class="text-3xl font-mono font-bold ${isPlaying ? 'text-white' : 'text-amber-400'}">
+                  ${String(calc.fullHours).padStart(2, '0')}:${String(calc.remMinutes).padStart(2, '0')}:${String(secRem).padStart(2, '0')}
+                </div>
+                <div class="text-xs text-emerald-400/90 mt-1">
+                  ค่าเวลา: <span class="font-bold text-white">${calc.totalCost}</span> บาท (${totalMinutes} นาที)
+                </div>
+              `}
+            </div>
+
+            <!-- Items / Extras on Table -->
+            ${!isAvailable ? `
+              <div class="mb-4 space-y-2">
+                <div class="flex items-center justify-between text-xs text-gray-300">
+                  <span class="font-medium">รายการเครื่องดื่ม/บริการ:</span>
+                  <span class="text-amber-400 font-bold">${itemsTotal} ฿</span>
+                </div>
+                <div class="flex flex-wrap gap-1 max-h-20 overflow-y-auto custom-scrollbar">
+                  ${(table.items || []).map((it, idx) => `
+                    <span class="inline-flex items-center gap-1 text-[11px] bg-[#1a3328] text-gray-200 px-2 py-0.5 rounded border border-[#234537]">
+                      ${it.name} ${it.price}฿
+                      <button onclick="removeDrinkFromTable('${table.id}', ${idx})" class="text-red-400 hover:text-red-300 ml-1">×</button>
+                    </span>
+                  `).join('')}
+                </div>
+                <!-- Quick Add Buttons -->
+                <div class="flex flex-wrap gap-1 pt-1">
+                  <button onclick="addDrinkToTable('${table.id}', 'น้ำเปล่า', 10)" class="text-[10px] px-2 py-1 bg-[#142820] hover:bg-[#1b382d] rounded text-emerald-300 border border-[#1f3b32]">+น้ำ 10฿</button>
+                  <button onclick="addDrinkToTable('${table.id}', 'ชา', 15)" class="text-[10px] px-2 py-1 bg-[#142820] hover:bg-[#1b382d] rounded text-emerald-300 border border-[#1f3b32]">+ชา 15฿</button>
+                  <button onclick="addDrinkToTable('${table.id}', 'เอส', 15)" class="text-[10px] px-2 py-1 bg-[#142820] hover:bg-[#1b382d] rounded text-emerald-300 border border-[#1f3b32]">+เอส 15฿</button>
+                  <button onclick="addDrinkToTable('${table.id}', 'เบียร์ป๋อง', 45)" class="text-[10px] px-2 py-1 bg-[#142820] hover:bg-[#1b382d] rounded text-emerald-300 border border-[#1f3b32]">+เบียร์ป๋อง 45฿</button>
+                  <button onclick="addDrinkToTable('${table.id}', 'เบียร์ขวด', 75)" class="text-[10px] px-2 py-1 bg-[#142820] hover:bg-[#1b382d] rounded text-emerald-300 border border-[#1f3b32]">+เบียร์ขวด 75฿</button>
+                  <button onclick="promptCustomDrink('${table.id}')" class="text-[10px] px-2 py-1 bg-[#1a2d24] hover:bg-[#233f32] rounded text-gray-300 border border-[#2d493e]">+อื่นๆ</button>
+                </div>
+              </div>
+
+              <!-- Grand Total Summary Line -->
+              <div class="flex items-baseline justify-between border-t border-[#1f3b32] pt-2 mb-4">
+                <span class="text-xs text-gray-400">ยอดรวมตอนนี้:</span>
+                <span class="text-xl font-bold text-amber-400">${grandTotal.toLocaleString()} <span class="text-xs font-normal text-gray-300">บาท</span></span>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Action Buttons Footer -->
+          <div>
+            ${isAvailable ? `
+              <button onclick="startTable('${table.id}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-all shadow-lg flex items-center justify-center gap-2">
+                <span>▶️</span>
+                <span>เปิดโต๊ะ (เริ่มเล่น)</span>
+              </button>
+            ` : `
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="togglePauseTable('${table.id}')" class="bg-[#1a3328] hover:bg-[#234537] text-gray-200 py-2 rounded-xl text-xs font-medium border border-[#2c5344] transition">
+                  ${isPlaying ? '⏸️ พักชั่วคราว' : '▶️ เล่นต่อ'}
+                </button>
+                <button onclick="openCheckoutModal('${table.id}')" class="bg-amber-600 hover:bg-amber-500 text-black font-bold py-2 rounded-xl text-xs transition shadow">
+                  💵 เช็คบิล / ปิดโต๊ะ
+                </button>
+              </div>
+            `}
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      updateActiveBadge();
+    }
+
+    // Live Ticking Interval (updates active tables every second)
+    setInterval(() => {
+      const hasActive = tables.some(t => t.status === 'playing');
+      if (hasActive) {
+        renderTablesGrid();
+      }
+    }, 1000);
+
+    /* ========================================================================
+       6. RATE CHART POPULATION
+       ======================================================================== */
+    function populateRateTable() {
+      const tbody = document.getElementById('rate-table-body');
+      tbody.innerHTML = '';
+
+      // There are 20 rows for Group 1 and 16 rows for Group 2
+      const maxRows = Math.max(GROUP1_TABLE.length, GROUP2_TABLE.length);
+
+      for (let i = 0; i < maxRows; i++) {
+        const row1 = GROUP1_TABLE[i];
+        const row2 = GROUP2_TABLE[i];
+
+        const tr = document.createElement('tr');
+        tr.id = `chart-row-${i}`;
+        tr.className = "hover:bg-[#172c23] transition-colors";
+
+        tr.innerHTML = `
+          <!-- Group 1 -->
+          <td class="py-2.5 px-3 border-r border-[#1f3b32] text-gray-300 font-medium ${row1 ? '' : 'text-gray-600'}">
+            ${row1 ? row1.label : '-'}
+          </td>
+          <td class="py-2.5 px-3 border-r-2 border-[#1f3b32] text-emerald-400 font-bold">
+            ${row1 ? row1.price : '-'}
+          </td>
+          <!-- Group 2 -->
+          <td class="py-2.5 px-3 border-r border-[#1f3b32] text-gray-300 font-medium ${row2 ? '' : 'text-gray-600'}">
+            ${row2 ? row2.label : '-'}
+          </td>
+          <td class="py-2.5 px-3 text-amber-400 font-bold">
+            ${row2 ? row2.price : '-'}
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      }
+    }
+
+    function highlightTableMinute(minuteVal) {
+      const val = parseInt(minuteVal);
+      // Remove previous highlights
+      document.querySelectorAll('#rate-table-body tr').forEach(tr => {
+        tr.classList.remove('bg-emerald-950/80', 'border-l-4', 'border-emerald-400');
+      });
+
+      if (!val || val < 1 || val > 60) return;
+
+      const idx1 = GROUP1_TABLE.findIndex(item => val >= item.minMinutes && val <= item.maxMinutes);
+      const idx2 = GROUP2_TABLE.findIndex(item => val >= item.minMinutes && val <= item.maxMinutes);
+
+      if (idx1 >= 0) {
+        const rowEl = document.getElementById(`chart-row-${idx1}`);
+        if (rowEl) rowEl.classList.add('bg-emerald-950/80', 'border-l-4', 'border-emerald-400');
+      }
+      if (idx2 >= 0 && idx2 !== idx1) {
+        const rowEl = document.getElementById(`chart-row-${idx2}`);
+        if (rowEl) rowEl.classList.add('bg-emerald-950/80');
+      }
+    }
+
+    /* ========================================================================
+       7. BILL HISTORY MANAGEMENT
+       ======================================================================== */
+    let billHistory = [];
+
+    function loadBillHistory() {
+      const saved = localStorage.getItem('snooker_bill_history');
+      if (saved) {
+        try {
+          billHistory = JSON.parse(saved);
+        } catch (e) {
+          billHistory = [];
+        }
+      }
+      renderBillHistory();
+    }
+
+    function addBillHistory(bill) {
+      billHistory.unshift(bill);
+      localStorage.setItem('snooker_bill_history', JSON.stringify(billHistory));
+      renderBillHistory();
+    }
+
+    function clearBillHistory() {
+      if (confirm('คุณแน่ใจหรือไม่ว่าต้องการล้างประวัติการเช็คบิลทั้งหมด?')) {
+        billHistory = [];
+        localStorage.removeItem('snooker_bill_history');
+        renderBillHistory();
+      }
+    }
+
+    function renderBillHistory() {
+      const emptyEl = document.getElementById('history-empty');
+      const tableContainer = document.getElementById('history-table-container');
+      const tbody = document.getElementById('history-rows');
+      const totalIncomeEl = document.getElementById('history-total-income');
+
+      if (!billHistory || billHistory.length === 0) {
+        emptyEl.classList.remove('hidden');
+        tableContainer.classList.add('hidden');
+        totalIncomeEl.textContent = '0 ฿';
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+      tableContainer.classList.remove('hidden');
+      tbody.innerHTML = '';
+
+      let sumIncome = 0;
+
+      billHistory.forEach((bill, idx) => {
+        sumIncome += bill.grandTotal || 0;
+        const d = new Date(bill.endTime);
+        const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-[#162720] transition-colors";
+        tr.innerHTML = `
+          <td class="py-3 px-4 text-gray-400">${timeStr}</td>
+          <td class="py-3 px-4 font-bold text-white">${bill.tableName}</td>
+          <td class="py-3 px-4 text-emerald-300 font-mono">${bill.fullHours}ชม. ${bill.remMinutes}น.</td>
+          <td class="py-3 px-4 font-mono">${bill.timeCost.toLocaleString()} ฿</td>
+          <td class="py-3 px-4 font-mono text-amber-300">${bill.extraCost.toLocaleString()} ฿</td>
+          <td class="py-3 px-4 font-mono font-bold text-amber-400 text-base">${bill.grandTotal.toLocaleString()} ฿</td>
+          <td class="py-3 px-4 text-center">
+            <button onclick="reprintHistoryBill(${idx})" class="text-xs text-gray-400 hover:text-emerald-300 px-2 py-1 rounded bg-[#1f3b32]">พิมพ์</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      totalIncomeEl.textContent = `${sumIncome.toLocaleString()} ฿`;
+    }
+
+    function reprintHistoryBill(idx) {
+      const bill = billHistory[idx];
+      if (!bill) return;
+
+      const startDate = new Date(bill.startTime || bill.endTime);
+      const endDate = new Date(bill.endTime);
+      const startStr = `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`;
+      const endStr = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
+
+      document.getElementById('print-table-info').textContent = `${bill.tableName} (${bill.group === 'group1' ? '100 บ./ชม.' : '80 บ./ชม.'})`;
+      document.getElementById('print-time-info').textContent = `วันที่: ${endDate.toLocaleString('th-TH')}`;
+      document.getElementById('print-range').textContent = `${startStr} - ${endStr}`;
+      document.getElementById('print-duration').textContent = `${bill.fullHours} ชม. ${bill.remMinutes} น.`;
+      document.getElementById('print-time-cost').textContent = `${bill.timeCost} บาท`;
+      document.getElementById('print-extra-cost').textContent = `${bill.extraCost} บาท`;
+      document.getElementById('print-total-cost').textContent = `${bill.grandTotal} บาท`;
+
+      window.print();
+    }
+
+    /* ========================================================================
+       8. TAB NAVIGATION & MODAL CONTROLS
+       ======================================================================== */
+    function switchTab(tabKey) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-600', 'text-white', 'shadow-md');
+        btn.classList.add('text-gray-400');
+      });
+
+      const activePane = document.getElementById(`tab-${tabKey}`);
+      const activeBtn = document.getElementById(`nav-${tabKey}`);
+
+      if (activePane) activePane.classList.remove('hidden');
+      if (activeBtn) {
+        activeBtn.classList.add('bg-emerald-600', 'text-white', 'shadow-md');
+        activeBtn.classList.remove('text-gray-400');
+      }
+
+      if (tabKey === 'tables') {
+        renderTablesGrid();
+      } else if (tabKey === 'calc') {
+        onCalcInputChange();
+      }
+    }
+
+    function closeQrModal() {
+      document.getElementById('qr-modal').classList.add('hidden');
+    }
+
+    /* ========================================================================
+       9. INITIALIZATION
+       ======================================================================== */
+    window.addEventListener('DOMContentLoaded', () => {
+      populateRateTable();
+      loadTablesState();
+      loadBillHistory();
+      setCurrentTimeToInput('calc-start-time');
+      setCalcMode('decimalHours');
+      document.getElementById('calc-decimal-hours').value = '0.00';
+      onCalcInputChange();
+    });
+  </script>
+</body>
+</html>
